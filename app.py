@@ -31,6 +31,28 @@ COOKIES_FILE = os.path.join(APP_DIR, 'cookies.txt')
 DOWNLOADS_DIR = os.path.join(APP_DIR, 'downloads')
 ZIP_OUTPUT = os.path.join(APP_DIR, 'downloads.zip')
 
+
+def get_app_port(default_port: int = 19484) -> int:
+    env_port = os.getenv('PORT')
+    if env_port and env_port.isdigit():
+        return int(env_port)
+
+    env_file = os.path.join(APP_DIR, '.env')
+    if os.path.exists(env_file):
+        try:
+            with open(env_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    k, v = line.split('=', 1)
+                    if k.strip() == 'PORT' and v.strip().isdigit():
+                        return int(v.strip())
+        except Exception:
+            pass
+
+    return default_port
+
 # Ensure downloads directory exists
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
@@ -396,5 +418,5 @@ if __name__ == '__main__':
         '/etc/ssl/apps/server.key'
     )
     
-    # Run on port 18484, HTTPS only
-    app.run(host='0.0.0.0', port=18484, debug=False, ssl_context=ssl_context)
+    # Run on configured port, HTTPS only
+    app.run(host='0.0.0.0', port=get_app_port(), debug=False, ssl_context=ssl_context)

@@ -28,7 +28,7 @@ python3 app.py
 ## Production run (gunicorn)
 ```bash
 cd /root/.openclaw/workspace/japps/YoutubeDownloader
-gunicorn -b 0.0.0.0:18484 --timeout 180 --certfile=/etc/ssl/apps/server.crt --keyfile=/etc/ssl/apps/server.key --workers 2 app:app
+source .env && gunicorn -b 0.0.0.0:${PORT} --timeout 180 --certfile=/etc/ssl/apps/server.crt --keyfile=/etc/ssl/apps/server.key --workers 2 app:app
 ```
 
 ## Systemd service example
@@ -43,7 +43,8 @@ User=appson
 WorkingDirectory=/root/.openclaw/workspace/japps/YoutubeDownloader
 Environment="PATH=/usr/local/bin:/usr/bin:/bin"
 Environment="PYTHONUNBUFFERED=1"
-ExecStart=/usr/local/bin/gunicorn -b 0.0.0.0:18484 --timeout 180 --certfile=/etc/ssl/apps/server.crt --keyfile=/etc/ssl/apps/server.key --workers 2 app:app
+EnvironmentFile=/root/.openclaw/workspace/japps/YoutubeDownloader/.env
+ExecStart=/usr/local/bin/gunicorn -b 0.0.0.0:${PORT} --timeout 180 --certfile=/etc/ssl/apps/server.crt --keyfile=/etc/ssl/apps/server.key --workers 2 app:app
 Restart=always
 RestartSec=10
 
@@ -53,7 +54,7 @@ WantedBy=multi-user.target
 
 ## UFW
 ```bash
-sudo ufw allow 18484/tcp
+source .env && sudo ufw allow ${PORT}/tcp
 ```
 
 ## IMPORTANT: cookies.txt from Chrome (local machine)
