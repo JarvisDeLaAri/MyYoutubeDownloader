@@ -1,0 +1,15 @@
+# Secrets
+cookies.txt
+*.env
+.env
+
+# Runtime output
+search.log
+downloads/
+downloads.zip
+gunicorn.ctl
+__pycache__/
+*.pyc
+
+# Local/system
+.DS_Store
