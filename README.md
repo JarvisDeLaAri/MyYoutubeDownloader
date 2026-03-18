@@ -82,3 +82,8 @@ This repo ignores sensitive/runtime files:
 - Search results come from yt-dlp search.
 - Download conversion is handled by Loader.to backend.
 - Multi-file download reliability improved with per-item retries and longer timeout.
+
+## Ariel links
+- YouTube: https://www.youtube.com/@BresleveloperAI/videos
+- WhatsApp: https://wa.me/972542634114
+- Email: mailto:ariel.rubi@gmail.com
