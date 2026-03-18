@@ -183,6 +183,15 @@ def log(msg):
         from datetime import datetime
         f.write(f"[{datetime.now().isoformat()}] {msg}\n")
 
+
+def safe_filename(name: str, max_len: int = 140) -> str:
+    """Create a filesystem-safe filename."""
+    if not name:
+        return "audio"
+    bad = '<>:"/\\|?*\n\r\t'
+    cleaned = ''.join('_' if c in bad else c for c in name).strip().rstrip('.')
+    return (cleaned[:max_len] or "audio")
+
 def search_youtube(query, max_results=10):
     """Search YouTube using yt-dlp with flat extraction."""
     log(f"SEARCH START: query='{query}', max_results={max_results}")
@@ -286,8 +295,18 @@ def index():
                 if os.path.exists(ZIP_OUTPUT):
                     os.remove(ZIP_OUTPUT)
                 
+                # Build id -> original title map from current queries
+                id_to_title = {}
+                query_lines = [q.strip() for q in queries.split('\n') if q.strip()]
+                for query in query_lines:
+                    for v in search_youtube(query):
+                        vid = v.get('id')
+                        if vid and vid not in id_to_title:
+                            id_to_title[vid] = v.get('title') or vid
+
                 # Download selected videos using the working provider only (Loader.to)
                 downloaded = []
+                downloaded_by_id = {}
                 tpd = ThirdPartyDownloader()
                 for video_id in selected:
                     video_url = f"https://www.youtube.com/watch?v={video_id}"
@@ -299,10 +318,11 @@ def index():
                         try:
                             res = tpd.resolve(video_url, audio_only=True)
                             if res.ok and res.media_url:
-                                safe_name = (res.filename or f"{video_id}.mp3").replace('/', '_')
-                                out_path = os.path.join(DOWNLOADS_DIR, safe_name)
+                                temp_name = (res.filename or f"{video_id}.mp3").replace('/', '_')
+                                out_path = os.path.join(DOWNLOADS_DIR, temp_name)
                                 tpd.download_to_file(res.media_url, out_path)
-                                downloaded.append(safe_name)
+                                downloaded.append(temp_name)
+                                downloaded_by_id[video_id] = temp_name
                                 log(f"LOADER OK: {video_id} attempt={attempt}")
                                 success = True
                                 break
@@ -314,6 +334,23 @@ def index():
 
                     if not success:
                         log(f"LOADER FINAL FAIL: {video_id} err={last_error}")
+
+                # Rename downloaded GUID files to original search titles (just before zipping)
+                for video_id, temp_name in downloaded_by_id.items():
+                    src = os.path.join(DOWNLOADS_DIR, temp_name)
+                    if not os.path.exists(src):
+                        continue
+                    base_title = safe_filename(id_to_title.get(video_id, video_id))
+                    dst_name = f"{base_title}.mp3"
+                    dst = os.path.join(DOWNLOADS_DIR, dst_name)
+                    i = 2
+                    while os.path.exists(dst) and os.path.abspath(dst) != os.path.abspath(src):
+                        dst_name = f"{base_title} ({i}).mp3"
+                        dst = os.path.join(DOWNLOADS_DIR, dst_name)
+                        i += 1
+                    if os.path.abspath(src) != os.path.abspath(dst):
+                        os.replace(src, dst)
+                        log(f"RENAMED: {temp_name} -> {dst_name}")
                 
                 # Create ZIP
                 if os.listdir(DOWNLOADS_DIR):
